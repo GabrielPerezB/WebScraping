@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "#       Instituto  Tecnológico de Costa Rica S.C\n#   Created by Gabriel Pérez    gabrielapb1996@gmail.com\n#   Web Scraping with R   \n#   Introducción al desarrollo de aplicaciones web \n\nlibrary(rvest)    #Librería utilizada para Web scraping\nlibrary(jsonlite) #Librería para manipular JSONs\nlibrary(stringr)  #Librería para manipular strings\nlibrary(mongolite) #Librería para conectarse con mongoDB\nlibrary(xml2)\n\n#se configura la coneccion con mongodb\nmongo <- mongo(collection = \"Cars\", db = \"webScrapingDB\", url = \"mongodb://localhost\",\n               verbose = TRUE)\n\n#obtenemos la estructura de la pagina por medio del URL\nurlCars <- \"http://www.usados.cr/?gclid=CLrg7eiohtMCFQgDhgod3wQD6Q&f_ucr_s_marca=Chevrolet&page=1\"\npaginaWeb <- read_html(urlCars)\n#obtenemos los links de paginación\npaginacion <-  paginaWeb %>% html_nodes(\".car-pagination a\") %>% html_attr('href')\nlinksPaginacion = c(urlCars)\nfor(i in paginacion){\n  linksPaginacion <- c(linksPaginacion,paste0(\"http://www.usados.cr/\",i))\n}\n#eliminamos la última posición porque se repite\nlinksPaginacion <- linksPaginacion[-length(linksPaginacion)]\n\n#obtenemos todos los links de los autos\nallLinks <- c()\nfor(i in linksPaginacion){\n  paginaWeb <- read_html(i)\n  allLinks <- c( allLinks,paginaWeb %>% html_nodes(\"a.show-more\") %>% html_attr('href'))\n}\nallLinks <-allLinks[-2]#este link tiene problemas\nallCars <- c()\nfor(i in allLinks){\n  allCars <- c(allCars,paste0(\"http://www.usados.cr/\",i))\n}\n\n\n\ndataDes <- c()\ndataDescName <- c()\ndataDescValue <- c()\ndf <- data.frame()\nlistJson <- c()\nfor(i in allCars){\n  paginaWeb <- read_html(i)\n  dataDes <- c()\n  dataDes <- c(dataDes, str_replace_all(paste0(\"Imagen: \",paginaWeb %>% html_nodes(\"#dtlist_imgVehiculo_0\") %>% html_attr('src')), \"[\\r\\n\\t]\" , \"\"))\n  dataDes <- c(dataDes, str_replace_all( paginaWeb %>% html_nodes(\".technical-data ul li\") %>% html_text(), \"[\\r\\n\\t]\" , \"\"))\n  dataDes <- c(dataDes, str_replace_all(paginaWeb %>% html_nodes(\"h1 span\") %>% html_text(), \"[\\r\\n\\t' | ']\" , \"\"))\n  \n  dataDescName <- c()\n   for(i in dataDes){\n     dataDescName <- c(dataDescName, strsplit(i,\":\")[[1]][-2][-2])\n   }\n   \n   dataDescValue <- c()\n   for(i in dataDes){\n     dataDescValue <- c(dataDescValue, strsplit(i,\":\")[[1]][-1])\n   }\n   dataDescValue <- dataDescValue[-1]\n   dataDescValue[1] <- paste0(\"http:\",dataDescValue[1]) \n  df <- data.frame(dataDescName,dataDescValue)\n  \n  dataJsons <- toJSON(df)\n  listJson <- c(listJson,dataJsons)\n}\nmongo$drop()\nfor(data in listJson){\n  dfTemp <- data.frame(data)\n  dataJsonsTemp <- toJSON(dfTemp)\n  mongo$insert(fromJSON(dataJsonsTemp))\n}\n\n\n",
+    "created" : 1491072543217.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "4067754846",
+    "id" : "ADBADF65",
+    "lastKnownWriteTime" : 1491275443,
+    "last_content_update" : 1491275443517,
+    "path" : "/media/why/Gabriel/TEC/I-2017/WEB/Investigación/Investigacion II/WebScrapingGabriel_Perez/Script.R",
+    "project_path" : "Script.R",
+    "properties" : {
+        "docOutlineVisible" : "0",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 1,
+    "source_on_save" : true,
+    "source_window" : "",
+    "type" : "r_source"
+}
